@@ -6,6 +6,7 @@
  */
 import {createHmac,timingSafeEqual,randomUUID} from 'node:crypto';
 import {recordIncoming} from './inbox.mjs';
+import {validateAttachment} from './media.mjs';
 
 const err = (message, status = 400) => Object.assign(Error(message), {status});
 
@@ -436,4 +437,18 @@ export async function submitBulkText({phone,message,phoneId,wabaId}){
  const d=await graph(c,c.phone+'/messages',{method:'POST',body:{messaging_product:'whatsapp',recipient_type:'individual',to:phone.replace(/^\+/,''),type:'text',text:{preview_url:false,body:message}}});
  if(!d.messages?.[0]?.id)throw err('Submission not confirmed',502);
  return d.messages[0].id;
+}
+
+export async function uploadBulkMedia(attachment,provider){
+ const c=config();if(!c.enabled||!webhookReady(c)||c.phone!==provider.phoneId||c.waba!==provider.wabaId)throw err('Live provider unavailable',403);
+ const a=validateAttachment(attachment),form=new FormData();form.append('messaging_product','whatsapp');form.append('type',a.mime);form.append('file',new Blob([a.bytes],{type:a.mime}),a.name);
+ let r,d;try{r=await fetch('https://graph.facebook.com/'+c.version+'/'+c.phone+'/media',{method:'POST',headers:{Authorization:'Bearer '+c.token},body:form,signal:AbortSignal.timeout(30000)});d=await r.json()}catch{throw err('Media upload failed or timed out',502)}
+ if(!r.ok||!d.id)throw err('Meta media upload rejected (HTTP '+r.status+')',502);
+ return {id:String(d.id),kind:a.kind,name:a.name};
+}
+export async function submitBulkMedia({phone,message,phoneId,wabaId,media}){
+ const c=config();if(!c.enabled||!webhookReady(c)||c.phone!==phoneId||c.waba!==wabaId)throw err('Live provider unavailable',403);
+ const item={id:media.id,...(media.kind==='document'?{filename:media.name}:{}),...(media.kind!=='audio'&&message?{caption:message}:{})};
+ const d=await graph(c,c.phone+'/messages',{method:'POST',body:{messaging_product:'whatsapp',recipient_type:'individual',to:phone.replace(/^\+/,''),type:media.kind,[media.kind]:item}});
+ if(!d.messages?.[0]?.id)throw err('Submission not confirmed',502);return d.messages[0].id;
 }

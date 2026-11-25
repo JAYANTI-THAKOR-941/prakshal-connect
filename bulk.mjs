@@ -1,5 +1,6 @@
 import {randomUUID} from 'node:crypto';
-import {bulkProviderStatus,submitBulkText} from './whatsapp.mjs';
+import {bulkProviderStatus,submitBulkText,uploadBulkMedia,submitBulkMedia} from './whatsapp.mjs';
+import {validateAttachment} from './media.mjs';
 const fail=(message,status=400)=>Object.assign(Error(message),{status});
 const clean=(x,n)=>String(x??'').trim().slice(0,n);
 export const MAX_RECIPIENTS=500;
@@ -46,19 +47,22 @@ export async function bulkRoute({p,m,db,user,body,save,audit,localTest=false,pro
    db.bulkRuns??=[];
    if(db.bulkRuns.some(r=>r.requestId===b.requestId))throw fail('Request already recorded; check history',409);
    if(db.bulkRuns.length>=100)throw fail('Campaign storage limit reached; contact administrator',409);
+   const attachment=b.attachment?validateAttachment(b.attachment):null;
    const draft=reviewLive(db,prepareBulk(db,b),cfg);
+   if(attachment&&(attachment.kind==='audio'||draft.rows.some(r=>r.message.length>1024)))throw fail('Media captions must be up to 1024 characters; audio with captions is not supported');
    const eligible=draft.rows.filter(r=>r.canSend);
    if(!eligible.length)throw fail('No recipients with an active verified 24-hour conversation');
    if(eligible.length>25)throw fail('Pilot safety limit: select at most 25 eligible recipients per live campaign');
    const row={id:randomUUID(),requestId:b.requestId,name:draft.name,createdAt:new Date().toISOString(),mode:'live',recipients:draft.rows.map(r=>({contactId:r.id,name:r.name,phone:r.phone,status:r.canSend?'Pending':'Skipped — template required'}))};
    db.bulkRuns.unshift(row);audit(user,'create direct-text campaign');await save();
+   let media=null;if(attachment){try{media=await uploadBulkMedia(b.attachment,cfg);row.attachment={name:media.name,kind:media.kind};await save()}catch(e){for(const r of row.recipients)if(r.status==='Pending'){r.status='Not attempted';r.error='Media upload failed'}await save();throw e}}
    for(const r of row.recipients){
     if(r.status!=='Pending')continue;
     const c=db.contacts.find(x=>x.id===r.contactId),current=provider();
     if(!c?.consent||!c.consentAt||c.phone!==r.phone||!current.enabled||current.phoneId!==cfg.phoneId||current.wabaId!==cfg.wabaId||!hasActiveWindow(db,r.phone,current)){r.status='Skipped';await save();continue}
     r.status='Submitting';await save();
     if(!c.consent||!hasActiveWindow(db,r.phone,current)){r.status='Skipped';await save();continue}
-    try{r.messageId=await submit({phone:r.phone,message:eligible.find(x=>x.id===r.contactId).message,phoneId:cfg.phoneId,wabaId:cfg.wabaId});r.status='Accepted'}
+    try{r.messageId=await (media?submitBulkMedia:submit)({phone:r.phone,message:eligible.find(x=>x.id===r.contactId).message,phoneId:cfg.phoneId,wabaId:cfg.wabaId,media});r.status='Accepted'}
     catch{r.status='Uncertain';r.error='Submission not confirmed. Check provider history before retrying.';await save();break}
     await save();
    }

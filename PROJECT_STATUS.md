@@ -146,3 +146,6 @@ Added custom message composer, 500-contact selection, server-side consent/dedup 
 
 ## v0.8.1 direct text pilot
 Source includes live eligibility review, actual official text API submission, confirmation, consent recheck, provider timestamp and account binding, duplicate request guard, history and webhook status tracking. 25 live recipients per campaign; 500 draft recipients. No live tests performed; public webhook deployment required. No real messages sent.
+
+## v0.9
+Focused React bulk-only interface, inline contact add, supported media upload and send, attachment history metadata. Legacy records preserved. No new dependencies. Runtime/build/media acceptance pending. No messages sent.
