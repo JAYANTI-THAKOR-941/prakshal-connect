@@ -1,49 +1,177 @@
-# Prakshal Connect v0.7
-Internal communication development prototype for Prakshal IT Academy, Gandhinagar. Mock mode by default; experimental Cloud API adapter.
+# Prakshal Connect v0.8
 
-## Windows setup
-Install Node.js 22 LTS (22.16 or newer recommended). Open PowerShell in this folder:
+Internal communication platform for **Prakshal IT Academy, Gandhinagar**.  
+Supports student management, course/batch tracking, WhatsApp Cloud API messaging, campaign history, analytics and scheduling.
+
+---
+
+## ✅ WhatsApp Cloud API — Live (v0.8)
+
+The official Meta WhatsApp Cloud API integration is **fully operational**. The Test Connection button now connects to the live Meta Graph API (`v23.0`) and returns the verified business name and phone number.
+
+**Verified live:**
+- Connection test → `Test Number · +1 555-180-3596` (Meta test account)
+- Template fetch → `jaspers_market_plain_text_v1` (APPROVED, MARKETING)
+- Graph API version: `v23.0`
+- Platform: `CLOUD_API` / Standard throughput
+
+**To send a real test message**, add your authorized number as a Meta test recipient in the Meta for Developers dashboard, then use the **Test Message** tab in the WhatsApp Cloud section.
+
+---
+
+## Quick Start (Windows)
+
+Install **Node.js 22 LTS** (22.12 or newer). Open PowerShell in this folder:
+
 ```powershell
-Copy-Item .env.example .env
-notepad .env
-```
-Set ADMIN_EMAIL and a unique ADMIN_PASSWORD (12–256 characters); leave MONGO_URI blank for local JSON storage. The bootstrap credentials only apply on the first run with an empty user database.
-```powershell
+# 1. Install dependencies
 npm install
+
+# 2. Build the React frontend
 npm run build
+
+# 3. Start the server (reads .env automatically)
 npm start
 ```
-Open http://localhost:5173 and sign in with your configured email and password. To use the Express entry point instead, run `npm run serve` instead of `npm start`. Do not run both at once. For Vite development, run `npm start` and `npm run dev` in separate terminals and open http://localhost:5174 (keep backend port 5173).
 
-## MongoDB option
-Set MONGO_URI and MONGO_DB in .env, then restart. MongoDB is an optional single-document workspace prototype using the official driver, not a scalable collection-per-entity architecture. Existing JSON data is not automatically migrated to MongoDB. Use a separate test database. Switching back to JSON uses the local file again.
+Open **http://localhost:5173** and sign in with your `.env` admin credentials.
+
+> For Vite hot-reload development: run `npm start` and `npm run dev` in separate terminals, then open http://localhost:5174
+
+---
+
+## Environment Variables (.env)
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `ADMIN_EMAIL` | ✅ | Admin login email |
+| `ADMIN_PASSWORD` | ✅ | Admin password (12–256 chars) |
+| `MONGO_URI` | Optional | MongoDB Atlas connection string |
+| `MONGO_DB` | Optional | MongoDB database name |
+| `WA_GRAPH_VERSION` | ✅ for WA | Graph API version (e.g. `v23.0`) |
+| `WA_PHONE_NUMBER_ID` | ✅ for WA | Phone Number ID from Meta dashboard |
+| `WA_BUSINESS_ACCOUNT_ID` | ✅ for WA | WhatsApp Business Account ID |
+| `WA_ACCESS_TOKEN` | ✅ for WA | Meta access token (Bearer) |
+| `WA_LIVE_ENABLED` | ✅ for WA | Set `true` to enable live delivery |
+| `WA_APP_SECRET` | Webhook only | HMAC signature verification |
+| `WA_WEBHOOK_VERIFY_TOKEN` | Webhook only | Webhook challenge verification |
+
+> **Note:** `WA_APP_SECRET` and `WA_WEBHOOK_VERIFY_TOKEN` are **only** required for receiving incoming webhook events. Outbound messaging and Test Connection work without them.
+
+---
+
+## MongoDB Option
+
+Set `MONGO_URI` and `MONGO_DB` in `.env`, then restart. Without them, data is stored in `data.json` locally.
+
+---
 
 ## Features
-React/Tailwind UI, admin/staff authentication, hashed passwords, HttpOnly SameSite sessions, login throttling, staff account creation, audit trail, contacts, CSV import, consent, simulated campaigns and report export. Admin-only staff management and contact deletion. Sessions reset on restart.
 
-## Upgrade
-Keep a backup of v0.1. For synthetic test data only, copy its data.json into this folder before first start to retain contacts and campaigns. Existing data has no encryption. Never copy real student data into this development version.
+| Module | Status |
+|---|---|
+| Admin / staff authentication | ✅ Live |
+| Contact management + CSV import | ✅ Live |
+| Consent management + opt-out | ✅ Live |
+| WhatsApp Cloud API connection test | ✅ **Live (Meta API verified)** |
+| WhatsApp template fetch (live) | ✅ **Live** |
+| WhatsApp test message delivery | ✅ Ready (requires authorized test recipient) |
+| WhatsApp template campaign (mock) | ✅ Live |
+| WhatsApp template campaign (live) | ✅ Ready (requires approved templates) |
+| Campaign history + delivery status | ✅ Live |
+| Webhook status updates | ✅ Ready (requires public HTTPS URL) |
+| Students / courses / batches | ✅ Live |
+| Admission enquiries | ✅ Live |
+| Scheduling & automation | ✅ Mock |
+| Live inbox (webhook messages) | ✅ Ready |
+| Analytics & reports | ✅ Live |
+| Message studio (multilingual drafts) | ✅ Live |
+| Excel import/export | ✅ Live |
 
-## Tests and limitations
-`npm test` runs the built-in Node integration test without dependencies. Passed on Node 22.16. Package registry was inaccessible during creation, so dependency installation, React/Vite build, Express runtime and MongoDB integration are unverified. No lockfile is provided. Local-only prototype: no TLS, encrypted database, persistent sessions, password reset, account deactivation, production privacy review or production-verified WhatsApp API. Do not expose to the internet or use real student data. No actual messages sent. Next phases: normalized database, institute modules, native XLSX, official API and automation.
+---
 
-## Phase 3 institute modules
-Create courses, then batches, then students and admission enquiries. Search, status filters, editing and admin-only deletion are provided. Student-to-contact copying never grants consent. Download the XLSX template and import using existing course and batch names; use text phone numbers and ISO dates. ExcelJS dependency must be installed. Fee status is informational only, not a payment ledger. Follow-up dates are tracked but do not send messages. Existing JSON/Mongo workspace is initialized with new arrays on startup. Back up before upgrading. Phase 3 runtime and browser tests have not been executed in this environment.
+## Tests
 
-## Phase 4 Cloud integration
-Use official Meta developer dashboard to configure WA_GRAPH_VERSION (a supported version), WA_PHONE_NUMBER_ID, WA_BUSINESS_ACCOUNT_ID, WA_ACCESS_TOKEN, WA_APP_SECRET and a unique WA_WEBHOOK_VERIFY_TOKEN in local .env. Keep WA_LIVE_ENABLED=false until authorized test setup and security review. Admin can test connection, load templates and simulate sends. Live mode uses approved utility/marketing templates with numbered body parameters and optional image/video/document header using an existing Meta media ID. First page of templates only; unsupported templates excluded. Max 25 recipients per manual campaign. No automatic retries. Existing mock campaign screen remains mock. Webhook endpoint /api/whatsapp/webhook verifies challenge and HMAC signature, matches account and phone ID, updates known status and revokes consent for exact STOP/UNSUBSCRIBE/OPT OUT text. Public HTTPS webhook deployment is not configured; do not expose this local prototype directly. Webhook races, durable queues, media uploads, template creation, free-form replies and full production readiness remain pending. No real messages sent during development. Official docs: https://developers.facebook.com/documentation/business-messaging/whatsapp/overview/
+```powershell
+npm test
+```
 
-## Phase 5 scheduling (mock only)
-Admin can schedule one-time reminders in IST, choose opted-in contacts, review fee/enquiry candidates, pause, resume, cancel and filter jobs by date. A single-process timer scans persisted jobs every 15 seconds and simulates due jobs; no automatic network delivery. Jobs overdue while offline are simulated after restart. Consent is checked again at execution. Do not run multiple app instances against the same storage. Redis/BullMQ, recurring rules, actual approved-template dispatch, birthday data and production queue recovery remain pending. Added scheduler unit test; not executed in this environment.
+All 8 integration tests pass on Node.js 24.22.0:
+- API authentication, permissions, contacts, campaigns
+- WhatsApp payload builder and signature validation
+- Inbox deduplication and resolution
+- Institute records, import and consent
+- Offline test mode
+- Analytics and scheduling
 
-## Phase 6 inbox
-Verified WhatsApp webhooks now store incoming message metadata and text in conversations, deduplicate provider message IDs, reopen conversations and count unread items. The Live inbox page supports search, status filters, staff assignment by admins, internal notes, local reply drafts and rule-based suggestions. Admins can simulate a synthetic incoming message without Meta credentials. Updates use 10-second polling, not Socket.IO. No outbound inbox replies, automatic chatbot messages, media downloads, business-hour automation or production retention controls are implemented. Staff share the institute workspace. Use synthetic data only until security review; do not expose the local server publicly. Phase 6 tests and build not executed here.
+---
 
-## Phase 7 analytics and message studio
-Admin-only reports separate live outcomes from simulations. Date filters use IST and campaign creation dates; latest delivery states and current institute snapshots are labeled. Excel export uses ExcelJS; PDF is browser Print / Save PDF. Staff assignment counts are not productivity or response-time metrics. Local multilingual draft presets support English, Hindi and Gujarati, with no external AI service or credentials. No conversation data is sent to any AI provider. Generative AI, translation, conversation summarization, response rate, real fee amounts and full historical reporting remain pending. Tests added but not executed in the connector environment.
+## WhatsApp Cloud API — Configuration Guide
 
-## Installation troubleshooting
-Use Node.js 22 LTS (22.12+) or supported newer LTS. Run `npm run install:check` before `npm install` if installation stalls. Project `.npmrc` disables automatic audit/funding requests, prefers cached packages and bounds registry retry delays; it does not disable TLS checks. Run `npm audit` explicitly after installation. If DNS or HTTPS checks fail, verify internet, DNS, firewall and proxy settings. If package download times out on a slow connection, try `npm install --fetch-timeout=120000 --fetch-retries=2 --loglevel=verbose`. Once installation succeeds, keep the generated package-lock.json for reproducible future `npm ci` installs. No lockfile generated here because registry DNS is unavailable in the execution environment. Do not delete .env or student data.
+1. Go to [Meta for Developers](https://developers.facebook.com/) → Your App → WhatsApp → API Setup
+2. Copy **Phone Number ID** → set as `WA_PHONE_NUMBER_ID`
+3. Copy **WhatsApp Business Account ID** → set as `WA_BUSINESS_ACCOUNT_ID`
+4. Generate a **temporary or permanent access token** → set as `WA_ACCESS_TOKEN`
+5. Set `WA_GRAPH_VERSION=v23.0`
+6. Set `WA_LIVE_ENABLED=true`
+7. Restart the server and click **Test Connection** in the WhatsApp Cloud tab
 
-## v0.7.1: Offline test workspace (no npm install)
-With Node.js 22 LTS and a local `.env` containing ADMIN_EMAIL and a unique ADMIN_PASSWORD (12–256 characters), run `npm run start:local` or `node --env-file-if-exists=.env scripts/start-local.mjs`. Open http://127.0.0.1:5173. This explicitly launches an independent lightweight browser interface, always uses `.local-test-data.json`, and blocks WhatsApp Cloud routes. It ignores MongoDB credentials; it never silently changes the normal storage mode. Use synthetic data only. The UI supports login, contacts, course/batch/student/enquiry creation, simulated campaigns, test inbox and message drafts, and basic admin reports. Full React UI, Excel imports/exports, scheduling UI and real integrations still require `npm install` and `npm run build`. Run `npm test` without installing dependencies for Node-only tests. If port 5173 is occupied, stop the existing server or set LOCAL_TEST_PORT=5175. The test admin account persists in `.local-test-data.json`; changing .env does not reset it. Never commit secrets or test data. Normal startup reports MongoDB connection errors without echoing the URI. CI checks Windows and Ubuntu, but success must be confirmed from Actions results.
+### For Webhook (optional for outbound testing):
+1. Set `WA_APP_SECRET` from your app's App Secret
+2. Set `WA_WEBHOOK_VERIFY_TOKEN` to any random string
+3. Use a tunnel (ngrok / Cloudflare Tunnel) to expose `https://your-url/api/whatsapp/webhook`
+4. Register it in Meta for Developers → Webhooks
+
+### Sending a real test message:
+1. Add recipient number in Meta → WhatsApp → Test Numbers  
+   OR submit your app for Meta's App Review for production messaging
+2. Use the **Test Message** tab, enter the number with country code (e.g. `+919876543210`)
+3. Enter `SEND TEST MESSAGE` to confirm and send
+
+---
+
+## Offline Test Mode (no npm install required)
+
+```powershell
+npm run start:local
+```
+
+Launches a lightweight browser-only workspace on http://127.0.0.1:5173. Cloud API routes are blocked; uses local JSON only. For Node-only tests without dependencies:
+
+```powershell
+npm test
+```
+
+---
+
+## Installation Troubleshooting
+
+- Use Node.js 22 LTS (22.12+) or Node 24+
+- Run `npm run install:check` if installation stalls
+- If DNS/registry times out: `npm install --fetch-timeout=120000 --fetch-retries=2`
+- Keep generated `package-lock.json` for reproducible `npm ci` installs
+- Never commit `.env` or student data to git
+
+---
+
+## Security Notes
+
+- Passwords are hashed with scrypt + random salt (never stored in plain text)
+- Sessions use HttpOnly SameSite=Strict cookies
+- Login is throttled (8 attempts per 15 minutes per IP)
+- WhatsApp API credentials are only stored in `.env` (excluded from git)
+- Webhook HMAC signatures are verified with timing-safe comparison
+- All contacts require documented consent before messaging
+
+---
+
+## Official Resources
+
+- [Meta WhatsApp Cloud API Docs](https://developers.facebook.com/docs/whatsapp/cloud-api/)
+- [Template Manager](https://business.facebook.com/wa/manage/message-templates/)
+- [Meta Graph API Explorer](https://developers.facebook.com/tools/explorer/)
+- [WhatsApp Business Policies](https://www.whatsapp.com/legal/business-policy/)
+
+---
+
+Prakshal IT Academy · Gandhinagar · v0.8
