@@ -140,3 +140,6 @@ The `/api/whatsapp/testmessage` endpoint is live and functional. To send a real 
 - **v0.3** (institute: students, courses, batches, enquiries, Excel import)
 - **v0.2** (staff management, audit trail, CSV import)
 - **v0.1** (authentication, contacts, mock campaigns)
+
+## v0.8 Bulk Sender
+Added custom message composer, 500-contact selection, server-side consent/dedup review, draft persistence and CSV export. No provider connected or live dispatch added. Existing Cloud module preserved. Test source added; runtime/build verification pending.

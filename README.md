@@ -175,3 +175,6 @@ npm test
 ---
 
 Prakshal IT Academy · Gandhinagar · v0.8
+
+## v0.8 Bulk Sender workspace
+Admin-only custom announcements for up to 500 existing opted-in contacts, filtered by course/batch/search, personalized preview, persisted drafts and reviewed CSV export. Provider selection is deferred: no live dispatch endpoint exists in this module. Existing official WhatsApp Cloud API remains separate; a future authorized provider must enforce consent, service-window/template rules and delivery limits. No unofficial session automation or account scraping. Exported student data must be protected. No new dependencies. Tests/build not executed in connector environment.
