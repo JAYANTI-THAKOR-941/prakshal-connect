@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {instituteRoute} from './institute.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import {randomUUID,randomBytes,scryptSync,timingSafeEqual,createHash} from 'node:crypto';
@@ -16,7 +17,7 @@ export async function createApp(opts={}){
  const file=opts.file||process.env.DATA_FILE||path.join(root,'data.json');let client,collection,db;
  if(process.env.MONGO_URI&&!opts.file){const {MongoClient}=await import('mongodb');client=new MongoClient(process.env.MONGO_URI);await client.connect();collection=client.db(process.env.MONGO_DB||'prakshal_connect').collection('workspace');db=(await collection.findOne({_id:'main'}))?.data;}
  else if(fs.existsSync(file))db=JSON.parse(fs.readFileSync(file,'utf8'));
- db={contacts:[],campaigns:[],users:[],audit:[],...db};
+ db={contacts:[],campaigns:[],users:[],audit:[],courses:[],batches:[],students:[],enquiries:[],...db};
  let pending=Promise.resolve();const save=()=>{const snapshot=JSON.stringify(db);const job=pending.catch(()=>{}).then(async()=>{if(collection)await collection.replaceOne({_id:'main'},{_id:'main',data:JSON.parse(snapshot)},{upsert:true});else{fs.writeFileSync(file+'.tmp',snapshot,{mode:0o600});fs.renameSync(file+'.tmp',file)}});pending=job;return job};
  if(!db.users.length){const email=clean(opts.email||process.env.ADMIN_EMAIL).toLowerCase(),password=opts.password||process.env.ADMIN_PASSWORD;if(!email.includes('@')||typeof password!=='string'||password.length<12||password.length>256)throw Error('Set ADMIN_EMAIL and ADMIN_PASSWORD (12–256 characters) in .env before first start.');db.users.push({id:randomUUID(),email,role:'admin',password:passwordHash(password)});await save()}
  const sessions=new Map(),attempts=new Map();const audit=(u,action)=>{db.audit.unshift({id:randomUUID(),user:u.email,action,at:new Date().toISOString()});db.audit=db.audit.slice(0,1000)};
@@ -27,6 +28,7 @@ export async function createApp(opts={}){
  const token=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('pc_session='))?.slice(11);const key=token?hash(token):'';const session=sessions.get(key);const user=session&&session.expires>Date.now()?db.users.find(x=>x.id===session.id):null;
  if(p==='/api/login'&&m==='POST'){const ip=req.socket.remoteAddress;let a=attempts.get(ip)||{count:0,until:0};if(a.until<Date.now())a={count:0,until:Date.now()+15*60000};if(a.count>=8)throw fail('Too many attempts. Try later.',429);const b=await body(req);const u=db.users.find(x=>x.email===clean(b.email).toLowerCase());if(!u||!verify(b.password,u.password)){a.count++;attempts.set(ip,a);throw fail('Invalid credentials',401)}attempts.delete(ip);for(const [k,v] of sessions)if(v.expires<Date.now())sessions.delete(k);const t=randomBytes(32).toString('hex');sessions.set(hash(t),{id:u.id,expires:Date.now()+8*3600000});res.setHeader('Set-Cookie',`pc_session=${t}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800`);audit(u,'login');await save();return send(200,publicUser(u))}
  if(!user)throw fail('Please sign in',401);
+ if(p.startsWith('/api/institute/')){const result=await instituteRoute({p,m,db,user,body:()=>body(req),save,audit});return send(result.status,result.data)}
  if(p==='/api/me'&&m==='GET')return send(200,publicUser(user));
  if(p==='/api/logout'&&m==='POST'){sessions.delete(key);res.setHeader('Set-Cookie','pc_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');return send(200,{ok:true})}
  if(p==='/api/state'&&m==='GET')return send(200,{contacts:db.contacts,campaigns:db.campaigns,storage:collection?'MongoDB':'Local JSON',mode:'mock'});

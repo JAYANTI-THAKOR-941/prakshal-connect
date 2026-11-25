@@ -1,5 +1,4 @@
-# Phase 2 / v0.2
-Implemented: React/Tailwind source, local JSON storage, optional MongoDB driver adapter, Express entry point, admin bootstrap, staff login and authorization, audit, CSV import, mock campaign workflow. Preserved Phase 1 contacts/campaigns schema.
-Verified: Node HTTP integration test passed (login, authorization, duplicate phone, consent, mock personalization, persistence and password hashing).
-Unverified: npm install, Vite build, browser UI, Express runtime, live MongoDB (package registry inaccessible).
-Pending: real WhatsApp API, native XLSX, students/courses/batches, scheduling, live inbox, production security and normalized database schema.
+# Phase 3 / v0.3
+Implemented in source: courses, batches, student directory, admission enquiries, fee status, follow-up dates, search/status filtering, record edits, admin-only deletion, reference checks, consent-safe student contact copying, XLSX template and import with ExcelJS. Added institute unit test. Existing authentication and mock campaigns preserved.
+Verification: source committed; Phase 3 runtime, dependency installation, browser build, XLSX import and live MongoDB testing pending. Phase 2 backend test previously passed; not rerun here.
+Pending: official WhatsApp API, media, webhooks, scheduling, automatic follow-ups, live inbox, normalized database and production security.

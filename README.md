@@ -1,4 +1,4 @@
-# Prakshal Connect v0.2
+# Prakshal Connect v0.3
 Internal communication development prototype for Prakshal IT Academy, Gandhinagar. Mock messaging only; no real WhatsApp delivery.
 
 ## Windows setup
@@ -26,3 +26,6 @@ Keep a backup of v0.1. For synthetic test data only, copy its data.json into thi
 
 ## Tests and limitations
 `npm test` runs the built-in Node integration test without dependencies. Passed on Node 22.16. Package registry was inaccessible during creation, so dependency installation, React/Vite build, Express runtime and MongoDB integration are unverified. No lockfile is provided. Local-only prototype: no TLS, encrypted database, persistent sessions, password reset, account deactivation, production privacy review or official WhatsApp API. Do not expose to the internet or use real student data. No actual messages sent. Next phases: normalized database, institute modules, native XLSX, official API and automation.
+
+## Phase 3 institute modules
+Create courses, then batches, then students and admission enquiries. Search, status filters, editing and admin-only deletion are provided. Student-to-contact copying never grants consent. Download the XLSX template and import using existing course and batch names; use text phone numbers and ISO dates. ExcelJS dependency must be installed. Fee status is informational only, not a payment ledger. Follow-up dates are tracked but do not send messages. Existing JSON/Mongo workspace is initialized with new arrays on startup. Back up before upgrading. Phase 3 runtime and browser tests have not been executed in this environment.
