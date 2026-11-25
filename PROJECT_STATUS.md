@@ -1,3 +1,3 @@
-# Phase 4 / v0.4
-Added experimental official Meta Cloud API adapter, admin connection test, supported approved template listing, consent-checked manual template submissions, mock default, explicit live confirmation, existing media ID headers, campaign history, webhook signature and status processing, STOP opt-out and unit test source. Existing institute modules preserved.
-Verification: runtime, build, real Meta credentials, media and webhook end-to-end tests pending. No real messages sent. Production hardening, durable queues, full template pagination, media upload, webhook deployment and race reconciliation, scheduling and live inbox pending.
+# Phase 5 / v0.5
+Implemented in source: persistent one-time mock scheduling, IST entry and date filter, reminder presets, fee/enquiry candidate suggestions, admin pause/resume/cancel, duplicate job check, consent recheck, simulation history and scheduler test source. Previous modules retained.
+Verification: Phase 5 runtime, UI build and tests not executed here. No real WhatsApp messages sent. Redis/BullMQ, recurring automation, birthday records, approved-template scheduled delivery and production deployment pending.

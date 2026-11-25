@@ -1,4 +1,4 @@
-# Prakshal Connect v0.4
+# Prakshal Connect v0.5
 Internal communication development prototype for Prakshal IT Academy, Gandhinagar. Mock mode by default; experimental Cloud API adapter.
 
 ## Windows setup
@@ -32,3 +32,6 @@ Create courses, then batches, then students and admission enquiries. Search, sta
 
 ## Phase 4 Cloud integration
 Use official Meta developer dashboard to configure WA_GRAPH_VERSION (a supported version), WA_PHONE_NUMBER_ID, WA_BUSINESS_ACCOUNT_ID, WA_ACCESS_TOKEN, WA_APP_SECRET and a unique WA_WEBHOOK_VERIFY_TOKEN in local .env. Keep WA_LIVE_ENABLED=false until authorized test setup and security review. Admin can test connection, load templates and simulate sends. Live mode uses approved utility/marketing templates with numbered body parameters and optional image/video/document header using an existing Meta media ID. First page of templates only; unsupported templates excluded. Max 25 recipients per manual campaign. No automatic retries. Existing mock campaign screen remains mock. Webhook endpoint /api/whatsapp/webhook verifies challenge and HMAC signature, matches account and phone ID, updates known status and revokes consent for exact STOP/UNSUBSCRIBE/OPT OUT text. Public HTTPS webhook deployment is not configured; do not expose this local prototype directly. Webhook races, durable queues, media uploads, template creation, free-form replies and full production readiness remain pending. No real messages sent during development. Official docs: https://developers.facebook.com/documentation/business-messaging/whatsapp/overview/
+
+## Phase 5 scheduling (mock only)
+Admin can schedule one-time reminders in IST, choose opted-in contacts, review fee/enquiry candidates, pause, resume, cancel and filter jobs by date. A single-process timer scans persisted jobs every 15 seconds and simulates due jobs; no automatic network delivery. Jobs overdue while offline are simulated after restart. Consent is checked again at execution. Do not run multiple app instances against the same storage. Redis/BullMQ, recurring rules, actual approved-template dispatch, birthday data and production queue recovery remain pending. Added scheduler unit test; not executed in this environment.

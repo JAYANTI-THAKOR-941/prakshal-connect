@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {scheduleRoute,runDueJobs} from './scheduler.mjs';
 import {whatsappRoute, whatsappWebhook} from './whatsapp.mjs';
 import {instituteRoute} from './institute.mjs';
 import fs from 'node:fs';
@@ -18,7 +19,7 @@ export async function createApp(opts={}){
  const file=opts.file||process.env.DATA_FILE||path.join(root,'data.json');let client,collection,db;
  if(process.env.MONGO_URI&&!opts.file){const {MongoClient}=await import('mongodb');client=new MongoClient(process.env.MONGO_URI);await client.connect();collection=client.db(process.env.MONGO_DB||'prakshal_connect').collection('workspace');db=(await collection.findOne({_id:'main'}))?.data;}
  else if(fs.existsSync(file))db=JSON.parse(fs.readFileSync(file,'utf8'));
- db={contacts:[],campaigns:[],users:[],audit:[],courses:[],batches:[],students:[],enquiries:[],waCampaigns:[],...db};
+ db={contacts:[],campaigns:[],users:[],audit:[],courses:[],batches:[],students:[],enquiries:[],waCampaigns:[],scheduledJobs:[],...db};
  let pending=Promise.resolve();const save=()=>{const snapshot=JSON.stringify(db);const job=pending.catch(()=>{}).then(async()=>{if(collection)await collection.replaceOne({_id:'main'},{_id:'main',data:JSON.parse(snapshot)},{upsert:true});else{fs.writeFileSync(file+'.tmp',snapshot,{mode:0o600});fs.renameSync(file+'.tmp',file)}});pending=job;return job};
  if(!db.users.length){const email=clean(opts.email||process.env.ADMIN_EMAIL).toLowerCase(),password=opts.password||process.env.ADMIN_PASSWORD;if(!email.includes('@')||typeof password!=='string'||password.length<12||password.length>256)throw Error('Set ADMIN_EMAIL and ADMIN_PASSWORD (12–256 characters) in .env before first start.');db.users.push({id:randomUUID(),email,role:'admin',password:passwordHash(password)});await save()}
  const sessions=new Map(),attempts=new Map();const audit=(u,action)=>{db.audit.unshift({id:randomUUID(),user:u.email,action,at:new Date().toISOString()});db.audit=db.audit.slice(0,1000)};
@@ -30,6 +31,7 @@ export async function createApp(opts={}){
  const token=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('pc_session='))?.slice(11);const key=token?hash(token):'';const session=sessions.get(key);const user=session&&session.expires>Date.now()?db.users.find(x=>x.id===session.id):null;
  if(p==='/api/login'&&m==='POST'){const ip=req.socket.remoteAddress;let a=attempts.get(ip)||{count:0,until:0};if(a.until<Date.now())a={count:0,until:Date.now()+15*60000};if(a.count>=8)throw fail('Too many attempts. Try later.',429);const b=await body(req);const u=db.users.find(x=>x.email===clean(b.email).toLowerCase());if(!u||!verify(b.password,u.password)){a.count++;attempts.set(ip,a);throw fail('Invalid credentials',401)}attempts.delete(ip);for(const [k,v] of sessions)if(v.expires<Date.now())sessions.delete(k);const t=randomBytes(32).toString('hex');sessions.set(hash(t),{id:u.id,expires:Date.now()+8*3600000});res.setHeader('Set-Cookie',`pc_session=${t}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800`);audit(u,'login');await save();return send(200,publicUser(u))}
  if(!user)throw fail('Please sign in',401);
+ if(p.startsWith('/api/schedule/')){const result=await scheduleRoute({p,m,db,user,body:()=>body(req),save,audit});return send(result.status,result.data)}
  if(p.startsWith('/api/whatsapp/')){const result=await whatsappRoute({p,m,db,user,body:()=>body(req),save,audit});return send(result.status,result.data)}
  if(p.startsWith('/api/institute/')){const result=await instituteRoute({p,m,db,user,body:()=>body(req),save,audit});return send(result.status,result.data)}
  if(p==='/api/me'&&m==='GET')return send(200,publicUser(user));
@@ -41,7 +43,8 @@ export async function createApp(opts={}){
  if(p==='/api/campaigns'&&m==='POST'){const b=await body(req);if(!clean(b.name)||!clean(b.message)||clean(b.message).length>4096||!Array.isArray(b.ids))throw fail('Enter campaign name, message and recipients');const eligible=db.contacts.filter(x=>b.ids.includes(x.id)&&x.consent);if(!eligible.length)throw fail('No opted-in recipients');const c={id:randomUUID(),name:clean(b.name),message:clean(b.message),createdAt:new Date().toISOString(),status:'Simulated',recipients:eligible.map(x=>({id:x.id,name:x.name,phone:x.phone,message:clean(b.message).replaceAll('{{name}}',x.name).replaceAll('{{course}}',x.course),status:'Mock only'}))};db.campaigns.unshift(c);audit(user,'simulate campaign');await save();return send(201,c)}
  return send(404,{error:'Not found'});
  }catch(e){return send(e.status||500,{error:e.status?e.message:'Internal server error'})}};
- return {handler,close:()=>client?.close()};
+ const timer=opts.disableScheduler?null:setInterval(()=>runDueJobs({db,save}).catch(()=>console.error('Mock scheduler tick failed')),15000);timer?.unref();
+ return {handler,close:()=>{if(timer)clearInterval(timer);return client?.close()}};
 }
 export async function createServer(opts){const app=await createApp(opts);const server=http.createServer(app.handler);server.on('close',()=>app.close());return server}
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){try{const server=await createServer();server.listen(Number(process.env.PORT)||5173,'127.0.0.1',()=>console.log('Prakshal Connect: http://127.0.0.1:'+(process.env.PORT||5173)))}catch(e){console.error(e.message);process.exitCode=1}}
