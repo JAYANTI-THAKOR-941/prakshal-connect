@@ -1,4 +1,5 @@
 import {createHmac,timingSafeEqual,randomUUID} from 'node:crypto';
+import {recordIncoming} from './inbox.mjs';
 const err=(message,status=400)=>Object.assign(Error(message),{status});
 const config=()=>({enabled:process.env.WA_LIVE_ENABLED==='true',version:process.env.WA_GRAPH_VERSION||'',phone:process.env.WA_PHONE_NUMBER_ID||'',waba:process.env.WA_BUSINESS_ACCOUNT_ID||'',token:process.env.WA_ACCESS_TOKEN||'',secret:process.env.WA_APP_SECRET||'',verify:process.env.WA_WEBHOOK_VERIFY_TOKEN||''});
 const configured=c=>/^v\d+\.\d+$/.test(c.version)&&/^\d+$/.test(c.phone)&&/^\d+$/.test(c.waba)&&!!c.token&&!!c.secret&&!!c.verify;
@@ -57,6 +58,6 @@ export async function whatsappWebhook({req,db,save}){
  const rank={Accepted:0,sent:1,delivered:2,read:3,failed:1};
  for(const entry of data.entry||[]){if(String(entry.id)!==c.waba)continue;for(const change of entry.changes||[]){const v=change.value;if(String(v?.metadata?.phone_number_id)!==c.phone)continue;
  for(const s of v.statuses||[]){if(!['sent','delivered','read','failed'].includes(s.status))continue;const r=db.waCampaigns.flatMap(x=>x.recipients).find(x=>x.messageId===s.id);if(r&&rank[s.status]>=(rank[r.status]??0)&&!(r.status==='failed'&&s.status==='sent')){r.status=s.status;r.statusAt=String(s.timestamp||'')}}
- for(const msg of v.messages||[]){const text=String(msg.text?.body||'').trim().toLowerCase();if(['stop','unsubscribe','opt out'].includes(text)){const contact=db.contacts.find(x=>x.phone==='+'+msg.from);if(contact){contact.consent=false;contact.consentAt=null}}}
+ for(const msg of v.messages||[]){recordIncoming(db,msg);const text=String(msg.text?.body||'').trim().toLowerCase();if(['stop','unsubscribe','opt out'].includes(text)){const contact=db.contacts.find(x=>x.phone==='+'+msg.from);if(contact){contact.consent=false;contact.consentAt=null}}}
  }}await save();return out(200,'OK')
 }

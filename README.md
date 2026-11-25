@@ -1,4 +1,4 @@
-# Prakshal Connect v0.5
+# Prakshal Connect v0.6
 Internal communication development prototype for Prakshal IT Academy, Gandhinagar. Mock mode by default; experimental Cloud API adapter.
 
 ## Windows setup
@@ -35,3 +35,6 @@ Use official Meta developer dashboard to configure WA_GRAPH_VERSION (a supported
 
 ## Phase 5 scheduling (mock only)
 Admin can schedule one-time reminders in IST, choose opted-in contacts, review fee/enquiry candidates, pause, resume, cancel and filter jobs by date. A single-process timer scans persisted jobs every 15 seconds and simulates due jobs; no automatic network delivery. Jobs overdue while offline are simulated after restart. Consent is checked again at execution. Do not run multiple app instances against the same storage. Redis/BullMQ, recurring rules, actual approved-template dispatch, birthday data and production queue recovery remain pending. Added scheduler unit test; not executed in this environment.
+
+## Phase 6 inbox
+Verified WhatsApp webhooks now store incoming message metadata and text in conversations, deduplicate provider message IDs, reopen conversations and count unread items. The Live inbox page supports search, status filters, staff assignment by admins, internal notes, local reply drafts and rule-based suggestions. Admins can simulate a synthetic incoming message without Meta credentials. Updates use 10-second polling, not Socket.IO. No outbound inbox replies, automatic chatbot messages, media downloads, business-hour automation or production retention controls are implemented. Staff share the institute workspace. Use synthetic data only until security review; do not expose the local server publicly. Phase 6 tests and build not executed here.
