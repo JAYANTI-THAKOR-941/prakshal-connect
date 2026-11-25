@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {createServer} from '../server.mjs';
+test('isolated test mode serves static UI and blocks cloud routes',async()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'pc-local-'));const server=await createServer({file:path.join(dir,'test.json'),email:'test@example.com',password:'test-password-long',staticDir:path.resolve('offline'),localTest:true,disableScheduler:true});
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
+ try{const home=await fetch(base);assert.equal(home.status,200);assert.match(await home.text(),/Offline test workspace/);assert.equal((await fetch(base+'/app.js')).status,200);assert.equal((await fetch(base+'/api/whatsapp/webhook')).status,403);assert.equal((await fetch(base+'/api/whatsapp/config')).status,403);const r=await fetch(base+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'test@example.com',password:'test-password-long'})});assert.equal(r.status,200);assert.ok(fs.existsSync(path.join(dir,'test.json')))}finally{await new Promise(r=>server.close(r));fs.rmSync(dir,{recursive:true,force:true})}
+});

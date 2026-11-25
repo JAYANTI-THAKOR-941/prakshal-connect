@@ -3,3 +3,6 @@ dist/
 .env
 data.json
 *.tmp
+
+.local-test-data.json
+.local-test-data.json.tmp
