@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {analyticsRoute} from './analytics.mjs';
 import {inboxRoute} from './inbox.mjs';
 import {scheduleRoute,runDueJobs} from './scheduler.mjs';
 import {whatsappRoute, whatsappWebhook} from './whatsapp.mjs';
@@ -32,6 +33,7 @@ export async function createApp(opts={}){
  const token=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('pc_session='))?.slice(11);const key=token?hash(token):'';const session=sessions.get(key);const user=session&&session.expires>Date.now()?db.users.find(x=>x.id===session.id):null;
  if(p==='/api/login'&&m==='POST'){const ip=req.socket.remoteAddress;let a=attempts.get(ip)||{count:0,until:0};if(a.until<Date.now())a={count:0,until:Date.now()+15*60000};if(a.count>=8)throw fail('Too many attempts. Try later.',429);const b=await body(req);const u=db.users.find(x=>x.email===clean(b.email).toLowerCase());if(!u||!verify(b.password,u.password)){a.count++;attempts.set(ip,a);throw fail('Invalid credentials',401)}attempts.delete(ip);for(const [k,v] of sessions)if(v.expires<Date.now())sessions.delete(k);const t=randomBytes(32).toString('hex');sessions.set(hash(t),{id:u.id,expires:Date.now()+8*3600000});res.setHeader('Set-Cookie',`pc_session=${t}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800`);audit(u,'login');await save();return send(200,publicUser(u))}
  if(!user)throw fail('Please sign in',401);
+ if(p.startsWith('/api/analytics/')){const result=await analyticsRoute({p,m,db,user,body:()=>body(req)});return send(result.status,result.data)}
  if(p.startsWith('/api/inbox/')){const result=await inboxRoute({p,m,db,user,body:()=>body(req),save,audit});return send(result.status,result.data)}
  if(p.startsWith('/api/schedule/')){const result=await scheduleRoute({p,m,db,user,body:()=>body(req),save,audit});return send(result.status,result.data)}
  if(p.startsWith('/api/whatsapp/')){const result=await whatsappRoute({p,m,db,user,body:()=>body(req),save,audit});return send(result.status,result.data)}

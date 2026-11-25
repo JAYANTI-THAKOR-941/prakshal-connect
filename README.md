@@ -1,4 +1,4 @@
-# Prakshal Connect v0.6
+# Prakshal Connect v0.7
 Internal communication development prototype for Prakshal IT Academy, Gandhinagar. Mock mode by default; experimental Cloud API adapter.
 
 ## Windows setup
@@ -38,3 +38,6 @@ Admin can schedule one-time reminders in IST, choose opted-in contacts, review f
 
 ## Phase 6 inbox
 Verified WhatsApp webhooks now store incoming message metadata and text in conversations, deduplicate provider message IDs, reopen conversations and count unread items. The Live inbox page supports search, status filters, staff assignment by admins, internal notes, local reply drafts and rule-based suggestions. Admins can simulate a synthetic incoming message without Meta credentials. Updates use 10-second polling, not Socket.IO. No outbound inbox replies, automatic chatbot messages, media downloads, business-hour automation or production retention controls are implemented. Staff share the institute workspace. Use synthetic data only until security review; do not expose the local server publicly. Phase 6 tests and build not executed here.
+
+## Phase 7 analytics and message studio
+Admin-only reports separate live outcomes from simulations. Date filters use IST and campaign creation dates; latest delivery states and current institute snapshots are labeled. Excel export uses ExcelJS; PDF is browser Print / Save PDF. Staff assignment counts are not productivity or response-time metrics. Local multilingual draft presets support English, Hindi and Gujarati, with no external AI service or credentials. No conversation data is sent to any AI provider. Generative AI, translation, conversation summarization, response rate, real fee amounts and full historical reporting remain pending. Tests added but not executed in the connector environment.
