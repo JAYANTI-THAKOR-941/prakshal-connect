@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {whatsappRoute, whatsappWebhook} from './whatsapp.mjs';
 import {instituteRoute} from './institute.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -17,17 +18,19 @@ export async function createApp(opts={}){
  const file=opts.file||process.env.DATA_FILE||path.join(root,'data.json');let client,collection,db;
  if(process.env.MONGO_URI&&!opts.file){const {MongoClient}=await import('mongodb');client=new MongoClient(process.env.MONGO_URI);await client.connect();collection=client.db(process.env.MONGO_DB||'prakshal_connect').collection('workspace');db=(await collection.findOne({_id:'main'}))?.data;}
  else if(fs.existsSync(file))db=JSON.parse(fs.readFileSync(file,'utf8'));
- db={contacts:[],campaigns:[],users:[],audit:[],courses:[],batches:[],students:[],enquiries:[],...db};
+ db={contacts:[],campaigns:[],users:[],audit:[],courses:[],batches:[],students:[],enquiries:[],waCampaigns:[],...db};
  let pending=Promise.resolve();const save=()=>{const snapshot=JSON.stringify(db);const job=pending.catch(()=>{}).then(async()=>{if(collection)await collection.replaceOne({_id:'main'},{_id:'main',data:JSON.parse(snapshot)},{upsert:true});else{fs.writeFileSync(file+'.tmp',snapshot,{mode:0o600});fs.renameSync(file+'.tmp',file)}});pending=job;return job};
  if(!db.users.length){const email=clean(opts.email||process.env.ADMIN_EMAIL).toLowerCase(),password=opts.password||process.env.ADMIN_PASSWORD;if(!email.includes('@')||typeof password!=='string'||password.length<12||password.length>256)throw Error('Set ADMIN_EMAIL and ADMIN_PASSWORD (12–256 characters) in .env before first start.');db.users.push({id:randomUUID(),email,role:'admin',password:passwordHash(password)});await save()}
  const sessions=new Map(),attempts=new Map();const audit=(u,action)=>{db.audit.unshift({id:randomUUID(),user:u.email,action,at:new Date().toISOString()});db.audit=db.audit.slice(0,1000)};
  const handler=async(req,res)=>{const send=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(data))};try{
  const p=new URL(req.url,'http://localhost').pathname,m=req.method;
+ if(p==='/api/whatsapp/webhook'){const result=await whatsappWebhook({req,db,save});res.writeHead(result.status,{'Content-Type':'text/plain','Cache-Control':'no-store'});return res.end(result.text)}
  if(!p.startsWith('/api/')){const base=fs.existsSync(path.join(root,'dist','index.html'))?path.join(root,'dist'):path.join(root,'public');const rel=p==='/'?'index.html':p.slice(1);const target=path.resolve(base,rel);if(!target.startsWith(base+path.sep)||!fs.existsSync(target)||!fs.statSync(target).isFile())return send(404,{error:'Not found'});res.writeHead(200,{'Content-Type':({'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml'})[path.extname(target)]||'application/octet-stream','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; object-src 'none'; frame-ancestors 'none'"});return res.end(fs.readFileSync(target))}
  if(!['GET','HEAD'].includes(m)&&req.headers.origin&&req.headers.origin!==`http://${req.headers.host}`&&req.headers.origin!==`https://${req.headers.host}`)throw fail('Origin rejected',403);
  const token=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('pc_session='))?.slice(11);const key=token?hash(token):'';const session=sessions.get(key);const user=session&&session.expires>Date.now()?db.users.find(x=>x.id===session.id):null;
  if(p==='/api/login'&&m==='POST'){const ip=req.socket.remoteAddress;let a=attempts.get(ip)||{count:0,until:0};if(a.until<Date.now())a={count:0,until:Date.now()+15*60000};if(a.count>=8)throw fail('Too many attempts. Try later.',429);const b=await body(req);const u=db.users.find(x=>x.email===clean(b.email).toLowerCase());if(!u||!verify(b.password,u.password)){a.count++;attempts.set(ip,a);throw fail('Invalid credentials',401)}attempts.delete(ip);for(const [k,v] of sessions)if(v.expires<Date.now())sessions.delete(k);const t=randomBytes(32).toString('hex');sessions.set(hash(t),{id:u.id,expires:Date.now()+8*3600000});res.setHeader('Set-Cookie',`pc_session=${t}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800`);audit(u,'login');await save();return send(200,publicUser(u))}
  if(!user)throw fail('Please sign in',401);
+ if(p.startsWith('/api/whatsapp/')){const result=await whatsappRoute({p,m,db,user,body:()=>body(req),save,audit});return send(result.status,result.data)}
  if(p.startsWith('/api/institute/')){const result=await instituteRoute({p,m,db,user,body:()=>body(req),save,audit});return send(result.status,result.data)}
  if(p==='/api/me'&&m==='GET')return send(200,publicUser(user));
  if(p==='/api/logout'&&m==='POST'){sessions.delete(key);res.setHeader('Set-Cookie','pc_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');return send(200,{ok:true})}

@@ -1,4 +1,3 @@
-# Phase 3 / v0.3
-Implemented in source: courses, batches, student directory, admission enquiries, fee status, follow-up dates, search/status filtering, record edits, admin-only deletion, reference checks, consent-safe student contact copying, XLSX template and import with ExcelJS. Added institute unit test. Existing authentication and mock campaigns preserved.
-Verification: source committed; Phase 3 runtime, dependency installation, browser build, XLSX import and live MongoDB testing pending. Phase 2 backend test previously passed; not rerun here.
-Pending: official WhatsApp API, media, webhooks, scheduling, automatic follow-ups, live inbox, normalized database and production security.
+# Phase 4 / v0.4
+Added experimental official Meta Cloud API adapter, admin connection test, supported approved template listing, consent-checked manual template submissions, mock default, explicit live confirmation, existing media ID headers, campaign history, webhook signature and status processing, STOP opt-out and unit test source. Existing institute modules preserved.
+Verification: runtime, build, real Meta credentials, media and webhook end-to-end tests pending. No real messages sent. Production hardening, durable queues, full template pagination, media upload, webhook deployment and race reconciliation, scheduling and live inbox pending.
