@@ -249,6 +249,7 @@ export async function whatsappRoute({p, m, db, user, body, save, audit}) {
 
   /* ── POST /api/whatsapp/testmessage  (Send single test message) ──────── */
   if (p === '/api/whatsapp/testmessage' && m === 'POST') {
+    if (!live) throw err('Enable authorized live messaging first',403);
     const b = await body();
     const to = String(b.to || '').trim().replace(/\s+/g, '');
     if (!/^\+[1-9]\d{7,14}$/.test(to)) throw err('Enter a valid recipient number with country code (e.g. +919876543210)');
@@ -400,7 +401,7 @@ export async function whatsappWebhook({req, db, save}) {
       // Delivery status updates
       for (const s of v.statuses || []) {
         if (!['sent', 'delivered', 'read', 'failed'].includes(s.status)) continue;
-        const r = db.waCampaigns.flatMap(x => x.recipients).find(x => x.messageId === s.id);
+        const r = [...db.waCampaigns,...(db.bulkRuns||[])].flatMap(x => x.recipients).find(x => x.messageId === s.id);
         if (r && rank[s.status] >= (rank[r.status] ?? 0) && !(r.status === 'failed' && s.status === 'sent')) {
           r.status   = s.status;
           r.statusAt = String(s.timestamp || '');
@@ -412,7 +413,7 @@ export async function whatsappWebhook({req, db, save}) {
 
       // Incoming messages
       for (const msg of v.messages || []) {
-        recordIncoming(db, msg);
+        recordIncoming(db, msg, {phoneId:c.phone,wabaId:c.waba});
         const text = String(msg.text?.body || '').trim().toLowerCase();
         if (['stop', 'unsubscribe', 'opt out'].includes(text)) {
           const contact = db.contacts.find(x => x.phone === '+' + msg.from);
@@ -424,4 +425,15 @@ export async function whatsappWebhook({req, db, save}) {
 
   await save();
   return out(200, 'OK');
+}
+
+export function bulkProviderStatus(){
+ const c=config();return {provider:'Meta Cloud API',enabled:c.enabled&&outboundReady(c)&&webhookReady(c),phoneId:c.phone,wabaId:c.waba};
+}
+export async function submitBulkText({phone,message,phoneId,wabaId}){
+ const c=config();
+ if(!c.enabled||!webhookReady(c)||c.phone!==phoneId||c.waba!==wabaId)throw err('Live provider or webhook configuration changed',403);
+ const d=await graph(c,c.phone+'/messages',{method:'POST',body:{messaging_product:'whatsapp',recipient_type:'individual',to:phone.replace(/^\+/,''),type:'text',text:{preview_url:false,body:message}}});
+ if(!d.messages?.[0]?.id)throw err('Submission not confirmed',502);
+ return d.messages[0].id;
 }

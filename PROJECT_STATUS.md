@@ -143,3 +143,6 @@ The `/api/whatsapp/testmessage` endpoint is live and functional. To send a real 
 
 ## v0.8 Bulk Sender
 Added custom message composer, 500-contact selection, server-side consent/dedup review, draft persistence and CSV export. No provider connected or live dispatch added. Existing Cloud module preserved. Test source added; runtime/build verification pending.
+
+## v0.8.1 direct text pilot
+Source includes live eligibility review, actual official text API submission, confirmation, consent recheck, provider timestamp and account binding, duplicate request guard, history and webhook status tracking. 25 live recipients per campaign; 500 draft recipients. No live tests performed; public webhook deployment required. No real messages sent.

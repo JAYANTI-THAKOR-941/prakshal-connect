@@ -10,7 +10,7 @@ export function suggestReply(text){
  if(/^(hi|hello|hey|namaste)[!. ]*$/.test(s))return 'Hello! Welcome to Prakshal IT Academy, Gandhinagar. How can we help you today?';
  return 'Thank you for your message. Our team will review your enquiry and respond.';
 }
-export function recordIncoming(db,msg,{mock=false,now=Date.now()}={}){
+export function recordIncoming(db,msg,{mock=false,now=Date.now(),phoneId='',wabaId=''}={}){
  if(!Array.isArray(db.conversations))db.conversations=[];
  const phone='+'+String(msg?.from||'').replace(/^\+/,'');const providerId=clean(msg?.id,250);
  if(!/^\+[1-9]\d{7,14}$/.test(phone)||!providerId)return null;
@@ -18,7 +18,9 @@ export function recordIncoming(db,msg,{mock=false,now=Date.now()}={}){
  let c=db.conversations.find(c=>c.phone===phone&&c.mock===mock);
  if(!c){const contact=db.contacts.find(x=>x.phone===phone);c={id:randomUUID(),phone,name:contact?.name||phone,mock,status:'Open',assignedTo:null,unread:0,messages:[],notes:[],updatedAt:new Date(now).toISOString()};db.conversations.unshift(c)}
  const type=clean(msg.type||'text',30),text=type==='text'?clean(msg.text?.body):'['+type+' message — media retrieval not enabled]';
- const incoming={id:randomUUID(),providerId,direction:'incoming',type,text,mock,at:new Date(now).toISOString()};
+ const eventMs=/^\d{1,12}$/.test(String(msg.timestamp||''))?Number(msg.timestamp)*1000:NaN;
+ const verifiedEventAt=!mock&&phoneId&&wabaId&&Number.isFinite(eventMs)&&eventMs>0&&eventMs<=now?new Date(eventMs).toISOString():null;
+ const incoming={id:randomUUID(),providerId,direction:'incoming',type,text,mock,at:new Date(now).toISOString(),verifiedEventAt,phoneId,wabaId};
  c.messages.push(incoming);c.unread++;c.status='Open';c.updatedAt=incoming.at;
  return c;
 }
