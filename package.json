@@ -11,7 +11,8 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "serve": "node --env-file-if-exists=.env express.mjs",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "install:check": "node scripts/check-install.mjs"
   },
   "dependencies": {
     "express": "^5.1.0",
